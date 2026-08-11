@@ -1,0 +1,4 @@
+interface:
+  display_name: "PredX X News Writer"
+  short_description: "Find X-hot news and draft verified bilingual posts"
+  default_prompt: "Use $predx-x-news-writer to produce one history-checked, verified bilingual X post package for the requested account."

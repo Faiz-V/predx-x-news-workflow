@@ -1,0 +1,20 @@
+{
+  "fixture_notice": "Synthetic public demo. This is not a real news claim or publication recommendation.",
+  "account": "PredX_News",
+  "status": "READY",
+  "post_mode": "standard_x",
+  "format_variant": "explained_news",
+  "story": "Illustrative reproducible model benchmark",
+  "story_key": "example-reproducible-model-benchmark",
+  "topic_key": "example-model-evaluation",
+  "style_fingerprint": "direct fact / capability to method to implication / limited implication / 3 blocks",
+  "opening_type": "direct fact",
+  "evidence_path": "capability to method to implication",
+  "ending_function": "limited implication",
+  "source_time": "2026-08-11T09:09:00+08:00",
+  "sources": [
+    "https://example.com/model-benchmark"
+  ],
+  "chinese": "示例：研究团队发布了一套新的模型评测方法。\n\n它把准确率、延迟和能耗放在同一测试中，让结果更容易复核。\n\n它的价值不是更大的分数，而是为能力声明提供可比较的证据。",
+  "english": "Example: A research team released a new model-evaluation method.\n\nIt tests accuracy, latency, and energy use together, making results easier to reproduce.\n\nIts value is not a bigger score, but comparable evidence behind capability claims."
+}

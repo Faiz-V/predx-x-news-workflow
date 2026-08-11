@@ -1,0 +1,24 @@
+.DS_Store
+.env
+.env.*
+.venv/
+__pycache__/
+*.py[cod]
+*.log
+*.pid
+*.sqlite*
+
+# Local collectors, browser state, and generated editorial records.
+runtime/
+sources/
+.deps_runtime/
+*_output.json
+*_packet.json
+run_*.json
+
+# Editor and test artifacts.
+.idea/
+.vscode/
+.pytest_cache/
+.coverage
+htmlcov/

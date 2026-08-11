@@ -1,0 +1,121 @@
+{
+  "collected_at": "2026-08-11T09:20:00+08:00",
+  "fixture_notice": "Synthetic public demo data. URLs and events are illustrative.",
+  "items": [
+    {
+      "id": "macro-release",
+      "published_at": "2026-08-11T09:03:00+08:00",
+      "source_type": "data_release",
+      "source_name": "Example Statistics Office",
+      "source_url": "https://example.com/macro-release",
+      "headline": "Example statistics office publishes a revised inflation series",
+      "content": "Synthetic fixture for candidate ranking.",
+      "categories": ["macro", "markets"],
+      "account_hint": ["PolymarketAlpha"],
+      "verification_status": "primary",
+      "impact_score": 8,
+      "duplicate_of": null,
+      "x_signal": {
+        "post_url": "https://x.com/example/status/1001",
+        "posted_at": "2026-08-11T09:05:00+08:00",
+        "metrics_collected_at": "2026-08-11T09:20:00+08:00",
+        "relative_velocity": 2.1,
+        "independent_post_count": 3,
+        "audience_fit": 9,
+        "heat_score": 74
+      }
+    },
+    {
+      "id": "geopolitics-briefing",
+      "published_at": "2026-08-11T09:04:00+08:00",
+      "source_type": "official_statement",
+      "source_name": "Example Foreign Ministry",
+      "source_url": "https://example.com/diplomacy-briefing",
+      "headline": "Example parties announce a new verified negotiation round",
+      "content": "Synthetic fixture for the geopolitics-first routing rule.",
+      "categories": ["geopolitics", "diplomacy"],
+      "account_hint": ["PolyPredX"],
+      "verification_status": "multi_source",
+      "impact_score": 7,
+      "duplicate_of": null,
+      "x_signal": {
+        "post_url": "https://x.com/example/status/1002",
+        "posted_at": "2026-08-11T09:06:00+08:00",
+        "metrics_collected_at": "2026-08-11T09:20:00+08:00",
+        "relative_velocity": 1.8,
+        "independent_post_count": 3,
+        "audience_fit": 8,
+        "heat_score": 66
+      }
+    },
+    {
+      "id": "domestic-politics-fallback",
+      "published_at": "2026-08-11T09:08:00+08:00",
+      "source_type": "official_statement",
+      "source_name": "Example Legislature",
+      "source_url": "https://example.com/committee-vote",
+      "headline": "Example committee schedules a domestic-policy vote",
+      "content": "Synthetic fallback with a higher score but lower selection tier.",
+      "categories": ["politics", "policy"],
+      "account_hint": ["PolyPredX"],
+      "verification_status": "primary",
+      "impact_score": 9,
+      "duplicate_of": null,
+      "x_signal": {
+        "post_url": "https://x.com/example/status/1003",
+        "posted_at": "2026-08-11T09:10:00+08:00",
+        "metrics_collected_at": "2026-08-11T09:20:00+08:00",
+        "relative_velocity": 2.5,
+        "independent_post_count": 4,
+        "audience_fit": 9,
+        "heat_score": 82
+      }
+    },
+    {
+      "id": "football-update",
+      "published_at": "2026-08-11T09:07:00+08:00",
+      "source_type": "official_statement",
+      "source_name": "Example Football Club",
+      "source_url": "https://example.com/team-update",
+      "headline": "Example club confirms a material squad update",
+      "content": "Synthetic fixture for sports routing.",
+      "categories": ["sports", "football"],
+      "account_hint": ["PredX_Labs"],
+      "verification_status": "primary",
+      "impact_score": 7,
+      "duplicate_of": null,
+      "x_signal": {
+        "post_url": "https://x.com/example/status/1004",
+        "posted_at": "2026-08-11T09:08:00+08:00",
+        "metrics_collected_at": "2026-08-11T09:20:00+08:00",
+        "relative_velocity": 1.9,
+        "independent_post_count": 3,
+        "audience_fit": 9,
+        "heat_score": 70
+      }
+    },
+    {
+      "id": "technology-benchmark",
+      "published_at": "2026-08-11T09:09:00+08:00",
+      "source_type": "official_statement",
+      "source_name": "Example Research Lab",
+      "source_url": "https://example.com/model-benchmark",
+      "headline": "Example lab releases a reproducible model benchmark",
+      "content": "Synthetic fixture for technology routing.",
+      "categories": ["technology", "ai"],
+      "account_hint": ["PredX_News"],
+      "verification_status": "primary",
+      "impact_score": 8,
+      "duplicate_of": null,
+      "x_signal": {
+        "post_url": "https://x.com/example/status/1005",
+        "posted_at": "2026-08-11T09:10:00+08:00",
+        "metrics_collected_at": "2026-08-11T09:20:00+08:00",
+        "relative_velocity": 2.0,
+        "independent_post_count": 3,
+        "audience_fit": 9,
+        "heat_score": 72
+      }
+    }
+  ]
+}

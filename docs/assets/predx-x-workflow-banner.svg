@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">PredX X News Workflow</title>
+  <desc id="desc">A dark editorial workflow banner showing five verification stages from signal to human release.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071319"/>
+      <stop offset="0.55" stop-color="#0b2025"/>
+      <stop offset="1" stop-color="#101a2a"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5ff2c2"/>
+      <stop offset="1" stop-color="#6ab8ff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="360" rx="28" fill="url(#bg)"/>
+  <circle cx="1025" cy="62" r="150" fill="#1bd9a3" opacity="0.10" filter="url(#glow)"/>
+  <circle cx="1135" cy="315" r="180" fill="#378dff" opacity="0.10" filter="url(#glow)"/>
+  <path d="M0 310 C230 252 390 380 640 310 S1010 238 1200 286" fill="none" stroke="#77efd2" stroke-width="1" opacity="0.14"/>
+
+  <g font-family="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+    <text x="72" y="88" fill="#84f6d2" font-size="17" font-weight="700" letter-spacing="3">PREDX · HUMAN-IN-THE-LOOP</text>
+    <text x="72" y="151" fill="#f3fbff" font-size="48" font-weight="760">X News Workflow</text>
+    <text x="72" y="190" fill="#a8bec7" font-size="20">Verified signals · bilingual parity · deterministic gates</text>
+
+    <g transform="translate(72 240)">
+      <rect x="0" y="0" width="162" height="58" rx="15" fill="#102b2c" stroke="#44cfa9" stroke-opacity="0.42"/>
+      <text x="81" y="35" text-anchor="middle" fill="#d8fff2" font-size="16" font-weight="650">01 · SIGNAL</text>
+
+      <path d="M171 29 H197" stroke="url(#accent)" stroke-width="2" opacity="0.65"/>
+      <circle cx="184" cy="29" r="3" fill="#63ecc4"/>
+
+      <rect x="206" y="0" width="162" height="58" rx="15" fill="#10282e" stroke="#53cfbd" stroke-opacity="0.42"/>
+      <text x="287" y="35" text-anchor="middle" fill="#ddfaff" font-size="16" font-weight="650">02 · VERIFY</text>
+
+      <path d="M377 29 H403" stroke="url(#accent)" stroke-width="2" opacity="0.65"/>
+      <circle cx="390" cy="29" r="3" fill="#66e2cb"/>
+
+      <rect x="412" y="0" width="162" height="58" rx="15" fill="#102630" stroke="#5ec8d7" stroke-opacity="0.42"/>
+      <text x="493" y="35" text-anchor="middle" fill="#e1f9ff" font-size="16" font-weight="650">03 · RANK</text>
+
+      <path d="M583 29 H609" stroke="url(#accent)" stroke-width="2" opacity="0.65"/>
+      <circle cx="596" cy="29" r="3" fill="#68d5df"/>
+
+      <rect x="618" y="0" width="162" height="58" rx="15" fill="#112333" stroke="#64bfe9" stroke-opacity="0.42"/>
+      <text x="699" y="35" text-anchor="middle" fill="#e6f7ff" font-size="16" font-weight="650">04 · ALIGN</text>
+
+      <path d="M789 29 H815" stroke="url(#accent)" stroke-width="2" opacity="0.65"/>
+      <circle cx="802" cy="29" r="3" fill="#68c7ec"/>
+
+      <rect x="824" y="0" width="214" height="58" rx="15" fill="#122039" stroke="#6ab8ff" stroke-opacity="0.54"/>
+      <circle cx="854" cy="29" r="10" fill="#6ab8ff"/>
+      <path d="M849 29 L853 33 L860 25" fill="none" stroke="#071319" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="960" y="35" text-anchor="middle" fill="#edf8ff" font-size="16" font-weight="700">05 · HUMAN RELEASE</text>
+    </g>
+  </g>
+</svg>
