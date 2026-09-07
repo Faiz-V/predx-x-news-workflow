@@ -4,7 +4,7 @@
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) · [Responsible use](docs/RESPONSIBLE_USE.md) · [Publication checklist](docs/PUBLICATION_CHECKLIST.md)
 
-A human-in-the-loop editorial workflow for producing verified, bilingual X post packages. It combines X-first demand signals, source and freshness gates, account-aware story routing, Chinese-first drafting, English semantic alignment, history-aware deduplication, and deterministic pre-publication linting.
+A human-in-the-loop editorial workflow for producing verified, bilingual X post packages. It combines X-first demand signals, source and freshness gates, account-aware story routing, Chinese-first drafting, English semantic alignment, history-aware deduplication, shared-run reliability controls, conservative performance feedback, and deterministic pre-publication linting.
 
 This repository is a public showcase of the workflow—not an autonomous posting bot. It never logs into X, stores credentials, publishes posts, or performs engagement actions.
 
@@ -44,9 +44,12 @@ The full decision model is documented in [Architecture](docs/ARCHITECTURE.md).
 | `references/` | Source, freshness, account, bilingual, style, scheduling, and verification rules |
 | `rank_candidates.py` | Scores eligible stories and applies account/category priorities |
 | `build_run_context.py` | Builds compact recent-history context for duplicate and style checks |
+| `run_lock.py` | Provides one project-wide lease so scheduled and manual runs cannot race on shared history or browser state |
+| `check_manual_cooldown.py` | Applies a bounded cooldown after an Alpha `HOLD`, with an explicit override path |
+| `build_performance_feedback.py` | Turns read-only published-post metrics into soft, reversible same-account priors |
 | `lint_output.py` | Validates structure, bilingual parity, safety rules, and history collisions |
 | `examples/` | Synthetic input and output fixtures safe for public use |
-| `tests/` | Dependency-free CLI smoke tests |
+| `tests/` and `scripts/test_*.py` | Dependency-free CLI and regression tests for ranking, lint, history, locks, cooldowns, and feedback |
 
 Production run records, browser state, source archives, local dependencies, and credentials are intentionally excluded.
 
@@ -66,6 +69,10 @@ python .agents/skills/predx-x-news-writer/scripts/lint_output.py \
   examples/sample-output.json
 
 python -m unittest discover -s tests -v
+
+python -m unittest discover \
+  -s .agents/skills/predx-x-news-writer/scripts \
+  -p 'test_*.py' -v
 ```
 
 The fixtures use `example.com` and synthetic copy. They demonstrate the contracts without publishing real operating history.
@@ -92,7 +99,7 @@ See [Responsible use](docs/RESPONSIBLE_USE.md) for the public-account and affili
 
 ## What this repository does not include
 
-This is the editorial intelligence layer, not a turnkey SaaS deployment. A browser collector, scheduler service, credential store, publishing integration, analytics dashboard, and production history are deliberately out of scope. The scheduling reference defines the operating contract; it does not install cron jobs or external automations.
+This is the editorial intelligence layer, not a turnkey SaaS deployment. A browser collector, scheduler service, credential store, publishing integration, analytics dashboard, and production history are deliberately out of scope. The scheduling reference defines the operating contract; it does not install cron jobs or external automations. Performance feedback is an optional, read-only prior: it can break a close tie after all editorial gates, but it never weakens verification or turns one successful post into a fixed template.
 
 ## Repository map
 

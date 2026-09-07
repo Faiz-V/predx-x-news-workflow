@@ -15,6 +15,7 @@ Use `READY` only when:
 - English matches Chinese block count, factual sequence, numbers, attribution, causal strength, and ending;
 - both copies pass account, hashtag, public-content, and format rules.
 - scheduled output includes a stable `story_key` and passes project-history checks for duplicate story, opening wording and actual ending wording.
+- a PolymarketAlpha `Verified Market Brief` records its fallback reason, is no more than 720 minutes old, and uses a primary source or multiple reputable sources; X may be `UNPROVEN`, but its true observed status and the complete X audit must be preserved.
 
 ## REVIEW
 
@@ -26,6 +27,7 @@ Use `REVIEW` when the event is credible but an editor must resolve a material is
 - the apparent cause is plausible but not verified;
 - the bilingual copies contain a deliberate wording choice that cannot be made strictly equivalent;
 - an explicit exception would mention a prediction market or product.
+- a PolymarketAlpha `Verified Market Brief` relies on one reputable report without primary confirmation.
 
 State the exact review item. Do not hide it in a generic caveat.
 
@@ -38,8 +40,9 @@ Use `HOLD` and omit both post bodies when:
 - the item is outside the permitted freshness window without a live development;
 - exact numbers, quotations, or the central causal claim cannot be traced;
 - no suitable story exists for the account.
-- a scheduled candidate is `UNPROVEN` on X and no fallback was explicitly permitted.
+- a scheduled candidate is `UNPROVEN` on X and is not an eligible PolymarketAlpha `Verified Market Brief`.
 - a scheduled run has not completed Snapshot B from `scheduled-research-protocol.md`.
+- a `PolymarketAlpha` candidate is centered on or originates from mainland China, Hong Kong or Macau and the user did not explicitly request China coverage for that run.
 
 ## Fact discipline
 

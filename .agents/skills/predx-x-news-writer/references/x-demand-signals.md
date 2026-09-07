@@ -61,7 +61,19 @@ Classify:
 
 A 61–180 minute live event may retain `HOT` or `WARM` status only when at least two distinct relevant echoes appeared in the last 60 minutes and `live_event`, `fresh_echo_count`, and `latest_fresh_echo_at` are recorded. Rank this Tier B fallback below any qualified story whose material fact was disclosed within 60 minutes.
 
-For scheduled production, draft `HOT` first, then `WARM`. Return `HOLD` for `UNPROVEN` unless the user explicitly permits a news-platform fallback.
+For scheduled production, draft `HOT` first, then `WARM`. Return `HOLD` for `UNPROVEN` except for the authorized PolymarketAlpha fallback below.
+
+## PolymarketAlpha Verified Market Brief fallback
+
+Only after the full strict X-news path and Snapshot B produce no qualified Alpha story, X heat becomes a ranking signal rather than a release gate for one fallback item. The X research surface, query lanes, source-time checks and audit are still required; `UNPROVEN` does not mean “skip X.” The fallback item must:
+
+- be no more than 720 minutes from the earliest credible disclosure of the current fact;
+- pass the US/EU audience fit, China hard exclusion, consequence, duplication and source-verification gates;
+- set `selection_mode: "verified_market_brief"`, `allow_news_platform_fallback: true`, and a specific `fallback_reason` explaining why the strict pool failed;
+- record the observed X status as `HOT`, `WARM`, or `UNPROVEN` without inflating it;
+- be limited to one PolymarketAlpha fallback per account-day and never use a `JUST IN` opening.
+
+This standing authorization applies only to PolymarketAlpha. It does not relax factual verification or permit routine price noise.
 
 ## Truth gate
 

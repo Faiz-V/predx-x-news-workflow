@@ -40,9 +40,13 @@ flowchart TB
     I --> L
 ```
 
-External scheduling, browser control, source storage, and X publication remain outside this boundary.
+External scheduling, browser control, source storage, and X publication remain outside this boundary. The project-wide lease is acquired before history, metrics, browser, or output work; a competing run stops with `SKIPPED_CONCURRENT_RUN` instead of waiting or bypassing the lease. Optional performance metrics enter only as a soft tie-breaker after the normal editorial gates.
 
 ## Core stages
+
+### 0. Shared-run reliability boundary
+
+`run_lock.py` serializes all four account workflows because they share project history and a signed-in research surface. It records acquisition, heartbeat, release, and stale-lease recovery without exposing the token to a competing run. `check_manual_cooldown.py` prevents repeated Alpha retries from turning a temporary evidence gap into a hot loop; an explicit operator override is required to bypass that cooldown.
 
 ### 1. X demand gate
 
@@ -75,11 +79,15 @@ Account categories constrain eligibility. `PolyPredX` gives qualified geopolitic
 
 This context prevents both factual duplication and template-like repetition.
 
-### 5. Bilingual drafting contract
+### 5. Optional performance feedback
+
+`build_performance_feedback.py` reads append-only, public post-metric snapshots and computes same-account medians, relative view indices, and grouped style associations. The resulting context is deliberately conservative: `MONITOR_ONLY` signals stay informational, while `LIMITED_EXPERIMENT` associations can break a close tie only after truth, freshness, account-fit, sensitivity, duplication, and source-quality gates have passed. Missing or stale metrics do not block normal production.
+
+### 6. Bilingual drafting contract
 
 Chinese is the authoritative mother draft. English is written only after the Chinese copy is locked, then aligned block by block. Numbers, named entities, attribution, causal strength, uncertainty, and the ending must remain equivalent.
 
-### 6. Deterministic lint
+### 7. Deterministic lint
 
 `lint_output.py` checks:
 

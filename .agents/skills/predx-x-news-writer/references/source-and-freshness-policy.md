@@ -11,6 +11,8 @@
 - Treat the scheduled trigger as the beginning of a collection interval, not a publication cutoff. A qualified event first posted during the run remains eligible and must be checked in Snapshot B.
 - A 61–180 minute event may use the live fallback only when at least two distinct relevant X echoes from the last 60 minutes establish current demand; otherwise reject it as stale.
 
+For PolymarketAlpha only, after the complete strict path and Snapshot B fail, a `Verified Market Brief` may use a current fact disclosed 0–720 minutes ago. It must be materially consequential for US/EU finance, markets, macro, crypto infrastructure or regulation; routine price movement, recycled commentary and an old fact with a fresh relay remain ineligible. A primary source or multiple reputable reports can support `READY`; one reputable report without primary confirmation must remain `REVIEW`. Never use `JUST IN` in this fallback.
+
 ## Source tiers
 
 1. Primary: government, regulator, court, league, club, company, executive, filing, transcript, official data release.
@@ -31,7 +33,7 @@ Prefer a primary source plus one independent report for consequential or dispute
 
 - For scheduled batches, begin with candidates visibly active on X; do not treat publication by a news platform alone as proof of audience demand.
 - Apply `x-demand-signals.md` before drafting. X heat selects the story; eligible sources verify it.
-- Prefer `HOT`, then `WARM`. Treat `UNPROVEN` as `HOLD` unless the user explicitly permits a news-platform fallback.
+- Prefer `HOT`, then `WARM`. Treat `UNPROVEN` as `HOLD` except for the standing PolymarketAlpha `Verified Market Brief` fallback.
 - A viral X post never overrides weak sourcing, a stale underlying event, or failed verification.
 
 ## Selection priorities
@@ -45,6 +47,8 @@ After verification and freshness gates, rank by:
 5. freshness;
 6. novelty relative to today's prior batches;
 7. clarity of the next observable development.
+
+For `PolymarketAlpha`, apply its regional gate before this ranking: reject every mainland China, Hong Kong or Macau policy, macro, currency, market or company story regardless of heat or source quality. Prefer US, EU and UK candidates. A non-US/Europe story must have direct, material and evidenced transmission to US/European markets or financial regulation, and this fallback never admits China-related content unless the user explicitly requests it for that run.
 
 For `PolyPredX`, apply one account-specific priority after all truth, freshness, and X-demand gates: choose a qualified geopolitical, conflict, diplomacy, sanctions, or international-security story before a qualified general-politics story. This is a selection preference, never permission to use a weaker source, unresolved battlefield claim, stale update, or `UNPROVEN` X signal; when the priority pool fails any gate, use the strongest qualified election, legislative, judicial, campaign, or domestic-policy candidate instead.
 

@@ -86,6 +86,7 @@ Use a 280-weighted-character English post only when the user explicitly asks for
 
 - Unsupported certainty such as “will undoubtedly” when evidence only supports possibility.
 - Treating allegations or forecasts as confirmed facts.
+- Internal workflow language in public copy, including “本轮采集时”, “截至本次核验”, `at collection time`, `as of this run`, Snapshot labels, audit status, or other wording that describes how the post was produced. Use reader-facing phrasing such as “截至目前” or `currently` only when the time qualifier matters.
 - Repetitive or unscoped “What do you think?”, “你怎么看？”, or “Stay tuned” endings; a question must name the real subject or tradeoff.
 - Direct prediction-market, betting, wallet-profit, or product promotion unless the user explicitly requests it.
 - Two extremes: a source card with no narrative, or an essay containing every available background detail.

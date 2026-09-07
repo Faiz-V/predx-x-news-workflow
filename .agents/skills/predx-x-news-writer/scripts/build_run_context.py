@@ -13,6 +13,7 @@ from typing import Any, Iterable
 
 ACTIVE_STATUSES = {"READY", "REVIEW"}
 OUTPUT_GLOBS = ("*output.json", "runtime/predx-x-news-writer/**/*.json")
+PERFORMANCE_FEEDBACK_PATH = Path("runtime/predx-x-news-writer/performance/feedback-latest.json")
 
 
 def parse_time(value: Any) -> datetime | None:
@@ -91,6 +92,20 @@ def item_time(item: dict[str, Any], path: Path) -> datetime:
     return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
 
 
+def item_run_time(item: dict[str, Any], path: Path) -> datetime:
+    audit = item.get("research_audit") if isinstance(item.get("research_audit"), dict) else {}
+    snapshot_b = audit.get("snapshot_b") if isinstance(audit.get("snapshot_b"), dict) else {}
+    for value in (
+        item.get("as_of"),
+        snapshot_b.get("finished_at"),
+        snapshot_b.get("started_at"),
+    ):
+        parsed = parse_time(value)
+        if parsed:
+            return parsed
+    return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+
+
 def iter_output_paths(root: Path) -> Iterable[Path]:
     seen: set[Path] = set()
     for pattern in OUTPUT_GLOBS:
@@ -144,7 +159,13 @@ def collect_history(
                     "story_key": story_key,
                     "topic_key": derive_topic_key(item),
                     "source_time": timestamp.isoformat(),
+                    "run_time": item_run_time(item, path).isoformat(),
                     "date": timestamp.astimezone(now.tzinfo).date().isoformat(),
+                    "run_date": item_run_time(item, path).astimezone(now.tzinfo).date().isoformat(),
+                    "selection_mode": str(item.get("selection_mode") or "strict_x_news"),
+                    "series_key": normalize_text(item.get("series_key")),
+                    "observation_period": str(item.get("observation_period") or "").strip(),
+                    "material_new_fact": str(item.get("material_new_fact") or "").strip(),
                     "opening_type": str(item.get("opening_type") or ""),
                     "evidence_path": str(item.get("evidence_path") or ""),
                     "ending_function": str(item.get("ending_function") or ""),
@@ -158,6 +179,88 @@ def collect_history(
 
     rows.sort(key=lambda row: row["source_time"], reverse=True)
     return rows
+
+
+def compact_performance_post(row: dict[str, Any]) -> dict[str, Any]:
+    metrics = row.get("metrics") if isinstance(row.get("metrics"), dict) else {}
+    return {
+        "story_key": str(row.get("story_key") or ""),
+        "content_family": str(row.get("content_family") or ""),
+        "opening_type": str(row.get("opening_type") or ""),
+        "ending_function": str(row.get("ending_function") or ""),
+        "views": metrics.get("views"),
+        "engagement_count": row.get("engagement_count"),
+        "relative_view_index": row.get("relative_view_index"),
+        "measurement_age_hours": row.get("measurement_age_hours"),
+        "post_url": str(row.get("post_url") or ""),
+    }
+
+
+def load_performance_feedback(root: Path, account: str, now: datetime) -> dict[str, Any]:
+    path = root / PERFORMANCE_FEEDBACK_PATH
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {"available": False, "reason": "PERFORMANCE_FEEDBACK_NOT_BUILT"}
+    except (OSError, json.JSONDecodeError):
+        return {"available": False, "reason": "PERFORMANCE_FEEDBACK_INVALID"}
+
+    accounts = payload.get("accounts") if isinstance(payload.get("accounts"), dict) else {}
+    summary = accounts.get(account) if isinstance(accounts.get(account), dict) else None
+    generated_at = parse_time(payload.get("generated_at"))
+    age_hours = (
+        max((now - generated_at).total_seconds() / 3600, 0.0)
+        if generated_at is not None
+        else None
+    )
+    common = {
+        "generated_at": payload.get("generated_at"),
+        "age_hours": round(age_hours, 2) if age_hours is not None else None,
+        "freshness": "CURRENT" if age_hours is not None and age_hours <= 36 else "STALE_OR_UNKNOWN",
+        "source_snapshot_count": payload.get("source_snapshot_count", 0),
+        "interpretation": "observational_association_soft_tiebreaker_only",
+    }
+    if summary is None:
+        return {"available": False, "reason": "ACCOUNT_NOT_IN_PERFORMANCE_FEEDBACK", **common}
+    if not summary.get("available"):
+        return {
+            "available": False,
+            "reason": summary.get("reason", "NO_MATCHED_MATURE_POSTS"),
+            "visible_post_count": summary.get("visible_post_count", 0),
+            "matched_post_count": summary.get("matched_post_count", 0),
+            "mature_post_count": summary.get("mature_post_count", 0),
+            **common,
+        }
+
+    all_signals = [signal for signal in summary.get("signals", []) if isinstance(signal, dict)]
+    if any("soft_use" in signal for signal in all_signals):
+        experiments = [signal for signal in all_signals if signal.get("soft_use") == "LIMITED_EXPERIMENT"]
+        monitor = [signal for signal in all_signals if signal.get("soft_use") == "MONITOR_ONLY"]
+        context_only = [signal for signal in all_signals if signal.get("soft_use") == "CONTEXT_ONLY"]
+        signals = (experiments[:4] + monitor[:2] + context_only[:2])[:6]
+    else:
+        decisive = [signal for signal in all_signals if signal.get("direction") != "NEAR_BASELINE"]
+        signals = (decisive or all_signals)[:6]
+    top_posts = [
+        compact_performance_post(row)
+        for row in summary.get("top_mature_posts", [])[:3]
+        if isinstance(row, dict)
+    ]
+    return {
+        "available": True,
+        "visible_post_count": summary.get("visible_post_count", 0),
+        "matched_post_count": summary.get("matched_post_count", 0),
+        "mature_post_count": summary.get("mature_post_count", 0),
+        "provisional_post_count": summary.get("provisional_post_count", 0),
+        "republished_post_count": summary.get("republished_post_count", 0),
+        "baseline": summary.get("baseline"),
+        "overfit_protection": summary.get("overfit_protection", {}),
+        "signals": signals,
+        "recommendations": summary.get("recommendations", []),
+        "top_mature_posts": top_posts,
+        "guardrail": "Use only after truth, freshness, account-fit, duplication, sensitivity and source-quality gates.",
+        **common,
+    }
 
 
 def main() -> int:
@@ -181,6 +284,20 @@ def main() -> int:
     active = [row for row in history if row["status"] in ACTIVE_STATUSES]
     same_day = [row for row in active if row["date"] == today]
     holds = [row for row in history if row["status"] == "HOLD"]
+    same_run_day = [row for row in active if row["run_date"] == today]
+    fallback_today = [
+        row for row in same_run_day if row["selection_mode"] == "verified_market_brief"
+    ]
+    latest_hold = max(
+        holds,
+        key=lambda row: parse_time(row["run_time"]).astimezone(timezone.utc),
+        default=None,
+    )
+    minutes_since_latest_hold = None
+    if latest_hold:
+        latest_hold_at = parse_time(latest_hold["run_time"])
+        if latest_hold_at:
+            minutes_since_latest_hold = max((now - latest_hold_at).total_seconds() / 60, 0.0)
     payload = {
         "ok": True,
         "account": args.account,
@@ -190,7 +307,25 @@ def main() -> int:
         "blocked_topic_keys": sorted({row["topic_key"] for row in active if row["topic_key"]}),
         "same_day_style_history": same_day[:8],
         "recent_story_history": active[:16],
-        "recent_holds": holds[:8],
+        "recent_holds": sorted(
+            holds,
+            key=lambda row: parse_time(row["run_time"]).astimezone(timezone.utc),
+            reverse=True,
+        )[:8],
+        "verified_market_brief_count_today": len(fallback_today),
+        "manual_retry_gate": {
+            "cooldown_minutes": 60,
+            "latest_hold_at": latest_hold["run_time"] if latest_hold else None,
+            "minutes_since_latest_hold": (
+                round(minutes_since_latest_hold, 1)
+                if minutes_since_latest_hold is not None
+                else None
+            ),
+            "eligible_without_override": (
+                minutes_since_latest_hold is None or minutes_since_latest_hold >= 60
+            ),
+        },
+        "performance_feedback": load_performance_feedback(root, args.account, now),
     }
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0

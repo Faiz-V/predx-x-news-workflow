@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,6 +43,12 @@ VERIFY_SCORE = {
     "single_reputable": 20,
     "unverified": -50,
 }
+ALPHA_CHINA_RE = re.compile(
+    r"(?:中国|中国人民银行|人民币|香港|\bChina(?:'s)?\b|\bChinese\b|\bPRC\b|\bPBOC\b|"
+    r"\byuan\b|\brenminbi\b|\bBeijing\b|\bHong Kong\b|\bHang Seng\b|\bA-shares?\b)",
+    re.IGNORECASE,
+)
+FALLBACK_VERIFICATION = {"primary", "multi_source", "single_reputable"}
 
 
 def clamp_number(value: Any, lower: float, upper: float, default: float = 0) -> float:
@@ -68,6 +75,30 @@ def freshness_score(age_minutes: float) -> float:
     if age_minutes <= 180:
         return 15
     return -35
+
+
+def alpha_fallback_eligible(item: dict[str, Any], age_minutes: float) -> tuple[bool, list[str]]:
+    """Apply the non-negotiable gates for the Alpha Verified Market Brief fallback."""
+    reasons: list[str] = []
+    verification = str(item.get("verification_status") or "")
+    impact = clamp_number(item.get("impact_score"), 0, 10)
+    searchable = "\n".join(
+        str(item.get(key) or "")
+        for key in ("headline", "summary", "story", "subject")
+    )
+    if age_minutes < -2 or age_minutes > 720:
+        reasons.append("outside Alpha fallback 12-hour window")
+    if verification not in FALLBACK_VERIFICATION:
+        reasons.append("insufficient source verification for Alpha fallback")
+    if impact < 6:
+        reasons.append("impact score below Alpha fallback minimum")
+    if item.get("duplicate_of"):
+        reasons.append("duplicate cannot enter Alpha fallback")
+    if item.get("audience_region") != "US_EU":
+        reasons.append("Alpha fallback requires explicit US_EU audience relevance")
+    if item.get("china_related") is not False or ALPHA_CHINA_RE.search(searchable):
+        reasons.append("China-related item blocked from PolymarketAlpha")
+    return not reasons, reasons
 
 
 def x_heat(item: dict[str, Any], now: datetime) -> tuple[float, str, float | None, list[str]]:
@@ -223,6 +254,11 @@ def main() -> int:
         action="store_true",
         help="Include candidates that do not pass the normal X demand gate",
     )
+    parser.add_argument(
+        "--alpha-market-brief",
+        action="store_true",
+        help="After the strict Alpha path is exhausted, include verified US/EU market briefs up to 12 hours old",
+    )
     args = parser.parse_args()
 
     try:
@@ -240,8 +276,19 @@ def main() -> int:
                 ):
                     continue
                 value, age, reasons, heat, trend_status, x_age = score(item, account, now)
-                if trend_status == "UNPROVEN" and not args.include_unproven:
-                    continue
+                strict_eligible = trend_status in {"HOT", "WARM"} and -2 <= age <= 180
+                selection_mode = "strict_x_news"
+                if not strict_eligible:
+                    if account == "PolymarketAlpha" and args.alpha_market_brief:
+                        fallback_eligible, fallback_notes = alpha_fallback_eligible(item, age)
+                        reasons.extend(fallback_notes)
+                        if not fallback_eligible:
+                            continue
+                        selection_mode = "verified_market_brief"
+                    elif trend_status == "UNPROVEN" and args.include_unproven:
+                        selection_mode = "strict_x_news"
+                    else:
+                        continue
                 rows.append(
                     {
                         "id": item.get("id"),
@@ -251,6 +298,8 @@ def main() -> int:
                         "age_minutes": age,
                         "x_heat_score": heat,
                         "trend_status": trend_status,
+                        "selection_mode": selection_mode,
+                        "fallback_eligible": selection_mode == "verified_market_brief",
                         "x_age_minutes": x_age,
                         "selection_priority": (
                             "geopolitics_first"

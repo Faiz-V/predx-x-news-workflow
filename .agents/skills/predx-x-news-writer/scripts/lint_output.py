@@ -18,6 +18,7 @@ from build_run_context import collect_history, derive_story_key, derive_topic_ke
 ACCOUNTS = {"PolymarketAlpha", "PolyPredX", "PredX_Labs", "PredX_News"}
 STATUSES = {"READY", "REVIEW", "HOLD"}
 POST_MODES = {"reference_long", "standard_x"}
+SELECTION_MODES = {"strict_x_news", "verified_market_brief"}
 URL_RE = re.compile(r"https?://\S+", re.IGNORECASE)
 HASHTAG_RE = re.compile(r"(?<!\w)#[\w_]+", re.UNICODE)
 CHINESE_RE = re.compile(r"[\u3400-\u9fff]")
@@ -33,6 +34,44 @@ CLICHE_RE = re.compile(
 NEXT_ZH_RE = re.compile(r"^(?:接下来|下一步|下一个(?:信号|看点|节点))")
 NEXT_EN_RE = re.compile(r"^(?:next\b|the next (?:signal|step|test|catalyst)\b|what happens next\b)", re.IGNORECASE)
 BARE_QUESTION_RE = re.compile(r"^(?:what do you think|your thoughts|你怎么看|怎么看)[？?]?$", re.IGNORECASE)
+ALPHA_CHINA_RE = re.compile(
+    r"(?:"
+    r"中国|中国人民银行|人民银行|人民币|北京|上海|深圳|香港|澳门|恒生|沪深|A股|"
+    r"阿里巴巴|腾讯|百度|京东|美团|拼多多|小米|华为|比亚迪|宁德时代|"
+    r"\bChina(?:'s)?\b|\bChinese\b|\bPRC\b|\bPBOC\b|People's Bank of China|"
+    r"\brenminbi\b|\byuan\b|\bBeijing\b|\bShanghai\b|\bShenzhen\b|"
+    r"\bHong Kong\b|\bMacau\b|\bHang Seng\b|\bCSI\s*300\b|\bA-shares?\b|"
+    r"\bAlibaba\b|\bTencent\b|\bBaidu\b|\bJD\.com\b|\bMeituan\b|\bPinduoduo\b|"
+    r"\bXiaomi\b|\bHuawei\b|\bBYD\b|\bCATL\b"
+    r")",
+    re.IGNORECASE,
+)
+ALPHA_FORBIDDEN_TIMEZONE_RE = re.compile(
+    r"(?:"
+    r"\bUTC\s*[+-]\s*\d{1,2}(?::?\d{2})?\b|"
+    r"\bGMT(?:\s*[+-]\s*\d{1,2}(?::?\d{2})?)?\b|"
+    r"\b(?:CST|ET|EST|EDT|CET|CEST|BST)\b|"
+    r"Eastern Time|Central European Time|British Summer Time|"
+    r"北京时间|中国标准时间"
+    r")",
+    re.IGNORECASE,
+)
+ALPHA_CLOCK_TIME_RE = re.compile(
+    r"(?:"
+    r"(?<!\d)(?:[01]?\d|2[0-3]):[0-5]\d(?:\s*(?:a\.?m\.?|p\.?m\.?))?|"
+    r"(?<!\d)(?:1[0-2]|[1-9])\s*(?:a\.?m\.?|p\.?m\.?)\b|"
+    r"(?<!\d)(?:[01]?\d|2[0-3])(?:时|点)(?:[0-5]?\d分)?"
+    r")",
+    re.IGNORECASE,
+)
+UTC_LABEL_RE = re.compile(r"(?<![A-Za-z])UTC(?![A-Za-z])", re.IGNORECASE)
+ALPHA_INTERNAL_PROCESS_ZH_RE = re.compile(
+    r"(?:截至)?(?:本轮|本次)(?:采集|抓取|核验|审计)(?:时|期间)?"
+)
+ALPHA_INTERNAL_PROCESS_EN_RE = re.compile(
+    r"\b(?:at|as of)\s+(?:(?:this|the)\s+)?(?:collection(?:\s+time)?|run|snapshot|audit)\b",
+    re.IGNORECASE,
+)
 ENDING_FAMILY_PATTERNS = (
     ("next-step", re.compile(r"^(?:接下来|下一步|下一个(?:信号|节点|看点)|next\b|the next\b|what happens next)", re.IGNORECASE)),
     ("test-whether", re.compile(r"^(?:真正的考验|考验在于|能否|是否|the test is|the question is whether|whether\b)", re.IGNORECASE)),
@@ -131,6 +170,81 @@ def numeric_alignment_warnings(chinese: str, english: str) -> list[str]:
                 f"block {index} has {zh_count} Chinese numeric token(s) and {en_count} English numeric token(s); verify alignment"
             )
     return warnings
+
+
+def alpha_timezone_errors(item: dict[str, Any], chinese: str, english: str) -> list[str]:
+    errors: list[str] = []
+    if item.get("audience_timezone") != "UTC":
+        errors.append('PolymarketAlpha READY/REVIEW items require audience_timezone: "UTC"')
+
+    for language, body in (("Chinese", chinese), ("English", english)):
+        forbidden = ALPHA_FORBIDDEN_TIMEZONE_RE.search(body)
+        if forbidden:
+            errors.append(
+                f"PolymarketAlpha {language} copy uses forbidden non-UTC timezone '{forbidden.group(0)}'"
+            )
+        for block_index, block in enumerate(content_blocks(body), 1):
+            if ALPHA_CLOCK_TIME_RE.search(block) and not UTC_LABEL_RE.search(block):
+                errors.append(
+                    f"PolymarketAlpha {language} block {block_index} has a clock time without an explicit UTC label"
+                )
+
+    internal_zh = ALPHA_INTERNAL_PROCESS_ZH_RE.search(chinese)
+    if internal_zh:
+        errors.append(
+            f"PolymarketAlpha Chinese copy exposes internal collection/audit language '{internal_zh.group(0)}'; use natural reader-facing wording such as '截至目前'"
+        )
+    internal_en = ALPHA_INTERNAL_PROCESS_EN_RE.search(english)
+    if internal_en:
+        errors.append(
+            f"PolymarketAlpha English copy exposes internal collection/audit language '{internal_en.group(0)}'; use natural reader-facing wording such as 'currently'"
+        )
+
+    timestamp_fields: list[tuple[str, Any]] = [
+        ("source_time", item.get("source_time")),
+        ("source_published_at", item.get("source_published_at")),
+        ("published_at", item.get("published_at")),
+        ("disclosure_time", item.get("disclosure_time")),
+    ]
+    event_time = item.get("event_time")
+    if event_time and parse_time(event_time) is not None:
+        timestamp_fields.append(("event_time", event_time))
+
+    signal = item.get("x_signal") if isinstance(item.get("x_signal"), dict) else {}
+    for key in (
+        "posted_at",
+        "first_seen_at",
+        "metrics_collected_at",
+        "final_refresh_at",
+        "latest_fresh_echo_at",
+    ):
+        timestamp_fields.append((f"x_signal.{key}", signal.get(key)))
+
+    first_snapshot = signal.get("first_snapshot")
+    if isinstance(first_snapshot, dict):
+        timestamp_fields.append(
+            ("x_signal.first_snapshot.collected_at", first_snapshot.get("collected_at"))
+        )
+    measurement_history = signal.get("measurement_history")
+    if isinstance(measurement_history, list):
+        for history_index, measurement in enumerate(measurement_history, 1):
+            if isinstance(measurement, dict):
+                timestamp_fields.append(
+                    (
+                        f"x_signal.measurement_history[{history_index}].collected_at",
+                        measurement.get("collected_at"),
+                    )
+                )
+
+    for field, value in timestamp_fields:
+        if value in (None, ""):
+            continue
+        parsed = parse_time(value)
+        if parsed is None:
+            errors.append(f"PolymarketAlpha {field} must be an ISO-8601 timestamp with timezone")
+        elif parsed.utcoffset() != timezone.utc.utcoffset(parsed):
+            errors.append(f"PolymarketAlpha {field} must be normalized to UTC")
+    return errors
 
 
 def load_payload(path: str | None) -> Any:
@@ -232,7 +346,7 @@ def apply_history_checks(
         exclude_path=candidate_path,
     )
     active = [row for row in history if row["status"] in {"READY", "REVIEW"}]
-    same_day = [row for row in active if row["date"] == as_of.date().isoformat()]
+    same_day = [row for row in active if row["run_date"] == as_of.date().isoformat()]
     result["history_compared"] = len(active)
 
     candidate_story_key = derive_story_key(item)
@@ -242,7 +356,43 @@ def apply_history_checks(
     chinese_blocks = content_blocks(get_text(item, "chinese", "chinese_post", "chinese_review"))
     opening = chinese_blocks[0] if chinese_blocks else ""
     ending = chinese_blocks[-1] if chinese_blocks else ""
-    follow_up = bool(item.get("follow_up_to") and item.get("material_new_fact"))
+    candidate_series_key = (
+        normalize_text(item.get("series_key"))
+        if result["account"] == "PolymarketAlpha"
+        else ""
+    )
+    candidate_observation_period = str(item.get("observation_period") or "").strip()
+    series_update = bool(
+        candidate_series_key
+        and candidate_observation_period
+        and get_text(item, "material_new_fact")
+    )
+    follow_up = bool(item.get("follow_up_to") and item.get("material_new_fact")) or series_update
+
+    if str(item.get("selection_mode") or "strict_x_news") == "verified_market_brief":
+        prior_fallback = next(
+            (row for row in same_day if row.get("selection_mode") == "verified_market_brief"),
+            None,
+        )
+        if prior_fallback:
+            result["errors"].append(
+                f"only one verified_market_brief is allowed per account per day; already used in {prior_fallback['file']}"
+            )
+
+    if candidate_series_key:
+        for row in active:
+            if candidate_series_key != row.get("series_key"):
+                continue
+            if candidate_observation_period == row.get("observation_period"):
+                result["errors"].append(
+                    f"series observation '{candidate_series_key}' for period '{candidate_observation_period}' already used in {row['file']}"
+                )
+                break
+            if row in same_day:
+                result["errors"].append(
+                    f"series '{candidate_series_key}' already used today in {row['file']}; limit recurring series to one item per day"
+                )
+                break
 
     for row in active:
         same_story_key = bool(candidate_story_key and candidate_story_key == row["story_key"])
@@ -301,6 +451,8 @@ def lint_item(item: dict[str, Any], index: int) -> dict[str, Any]:
     source_time = get_text(item, "source_time", "published_at")
     x_signal = item.get("x_signal") if isinstance(item.get("x_signal"), dict) else {}
     trend_status = str(item.get("trend_status") or x_signal.get("trend_status") or "").upper()
+    selection_mode = str(item.get("selection_mode") or "strict_x_news")
+    allow_fallback = item.get("allow_news_platform_fallback") is True
     zh_blocks = content_blocks(chinese)
     en_blocks = content_blocks(english)
     zh_length = visible_zh_length(chinese)
@@ -314,21 +466,72 @@ def lint_item(item: dict[str, Any], index: int) -> dict[str, Any]:
         errors.append(f"invalid status: {status or '<missing>'}")
     if mode not in POST_MODES:
         errors.append(f"invalid post_mode: {mode or '<missing>'}")
+    if selection_mode not in SELECTION_MODES:
+        errors.append(f"invalid selection_mode: {selection_mode or '<missing>'}")
     if not isinstance(sources, list) or not sources:
         errors.append("at least one source URL is required")
     elif any(not isinstance(source, str) or not URL_RE.fullmatch(source.strip()) for source in sources):
         errors.append("every source must be a direct HTTP(S) URL")
     if not source_time:
         errors.append("source_time or published_at is required")
-    if item.get("scheduled_run") and status != "HOLD" and not item.get("allow_news_platform_fallback"):
-        if trend_status not in {"HOT", "WARM"}:
-            errors.append("scheduled READY/REVIEW items require a HOT or WARM X signal")
-        if not x_signal.get("post_url") or not x_signal.get("posted_at"):
-            errors.append("scheduled READY/REVIEW items require X post URL and timestamp")
+
+    fallback_requested = allow_fallback or selection_mode == "verified_market_brief"
+    if fallback_requested:
+        if account != "PolymarketAlpha":
+            errors.append("verified market brief fallback is currently authorized only for PolymarketAlpha")
+        if not (allow_fallback and selection_mode == "verified_market_brief"):
+            errors.append(
+                'verified market brief requires allow_news_platform_fallback: true and selection_mode: "verified_market_brief"'
+            )
+        if not get_text(item, "fallback_reason"):
+            errors.append("verified_market_brief requires a fallback_reason")
+        if trend_status not in {"HOT", "WARM", "UNPROVEN"}:
+            errors.append("verified_market_brief requires an explicit HOT, WARM, or UNPROVEN X signal")
+        verification_status = str(item.get("verification_status") or "")
+        if verification_status not in {"primary", "multi_source", "single_reputable"}:
+            errors.append(
+                "verified_market_brief requires verification_status primary, multi_source, or single_reputable"
+            )
+        if status == "READY" and verification_status == "single_reputable":
+            errors.append("single_reputable verified_market_brief must remain REVIEW")
+        try:
+            impact_score = float(item.get("impact_score"))
+        except (TypeError, ValueError):
+            errors.append("verified_market_brief requires numeric impact_score")
+        else:
+            if impact_score < 6 or impact_score > 10:
+                errors.append("verified_market_brief impact_score must be between 6 and 10")
+        try:
+            source_age_minutes = float(item.get("source_age_minutes"))
+        except (TypeError, ValueError):
+            errors.append("verified_market_brief requires numeric source_age_minutes")
+        else:
+            if source_age_minutes < 0 or source_age_minutes > 720:
+                errors.append("verified_market_brief source_age_minutes must be between 0 and 720")
+
+    if item.get("scheduled_run") and status != "HOLD":
         if not get_text(item, "story_key"):
             errors.append("scheduled READY/REVIEW items require a stable story_key for duplicate checks")
         if not get_text(item, "topic_key"):
             errors.append("scheduled READY/REVIEW items require a stable topic_key for recent-series checks")
+        if not fallback_requested:
+            if selection_mode != "strict_x_news":
+                errors.append('strict scheduled items require selection_mode: "strict_x_news"')
+            if trend_status not in {"HOT", "WARM"}:
+                errors.append("scheduled READY/REVIEW items require a HOT or WARM X signal")
+            if not x_signal.get("post_url") or not x_signal.get("posted_at"):
+                errors.append("scheduled READY/REVIEW items require X post URL and timestamp")
+
+    if status != "HOLD" and account == "PolymarketAlpha":
+        series_values = {
+            "series_key": get_text(item, "series_key"),
+            "observation_period": get_text(item, "observation_period"),
+            "material_new_fact": get_text(item, "material_new_fact"),
+        }
+        if any(series_values.values()) and not all(series_values.values()):
+            errors.append(
+                "series updates require series_key, observation_period, and material_new_fact together"
+            )
 
     if status == "REVIEW" and not get_text(item, "review_item", "editorial_caveat"):
         errors.append("REVIEW items require an exact review_item")
@@ -339,6 +542,19 @@ def lint_item(item: dict[str, Any], index: int) -> dict[str, Any]:
         if chinese or english:
             errors.append("HOLD items must omit both Chinese and English post bodies")
     else:
+        if account == "PolymarketAlpha":
+            if item.get("audience_region") != "US_EU":
+                errors.append('PolymarketAlpha READY/REVIEW items require audience_region: "US_EU"')
+            if item.get("china_related") is not False:
+                errors.append("PolymarketAlpha READY/REVIEW items require china_related: false")
+            alpha_selection_text = "\n".join(
+                [get_text(item, "story", "subject"), chinese, english]
+            )
+            if ALPHA_CHINA_RE.search(alpha_selection_text):
+                errors.append(
+                    "PolymarketAlpha China hard gate failed: selected story or post body is China-related"
+                )
+            errors.extend(alpha_timezone_errors(item, chinese, english))
         if not chinese:
             errors.append("READY/REVIEW items require a Chinese mother draft")
         if not english:
@@ -369,6 +585,8 @@ def lint_item(item: dict[str, Any], index: int) -> dict[str, Any]:
                 warnings.append("long English block(s): " + ", ".join(map(str, long_en)))
 
             just_in = zh_blocks[0].upper().startswith("JUST IN:") or en_blocks[0].upper().startswith("JUST IN:")
+            if fallback_requested and just_in:
+                errors.append("verified_market_brief must not use a JUST IN opening")
             source_age = item.get("source_age_minutes")
             if just_in and source_age is not None:
                 try:
@@ -438,6 +656,8 @@ def lint_item(item: dict[str, Any], index: int) -> dict[str, Any]:
         "format_variant": variant,
         "source_time": source_time,
         "trend_status": trend_status or None,
+        "selection_mode": selection_mode,
+        "audience_timezone": item.get("audience_timezone"),
         "chinese_length": zh_length,
         "english_length": en_length,
         "weighted_english_length": weighted_length(english) if english else 0,
