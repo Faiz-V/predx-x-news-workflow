@@ -53,6 +53,8 @@ flowchart LR
 
 需要 Python 3.10+，工具脚本仅使用标准库。
 
+完整工作流及脚本回归测试需要 POSIX 环境（Linux、macOS 或 WSL）：`run_lock.py` 使用 Python 的 `fcntl` 模块。原生 Windows 可以运行排序、Lint 和根目录 `tests/`，但无法导入共享运行锁或完成整组脚本测试。下方多行示例使用 POSIX shell；PowerShell 用户应将每条命令写在一行。
+
 ```bash
 git clone https://github.com/Faiz-V/predx-x-news-workflow.git
 cd predx-x-news-workflow
@@ -72,6 +74,8 @@ python -m unittest discover \
 ```
 
 示例只使用 `example.com` 和虚构内容，用来演示输入输出契约，不暴露真实运营历史。
+
+CI 在 Ubuntu 的 Python 3.10 和 3.12 上运行根目录 CLI 测试、脚本回归测试与公开示例检查。这些检查验证确定性工具，不代表已核实实时新闻、来源真实性或模型生成内容的编辑质量。
 
 ## 安全边界
 

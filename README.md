@@ -57,6 +57,8 @@ Production run records, browser state, source archives, local dependencies, and 
 
 Requirements: Python 3.10+; the utility scripts use only the standard library.
 
+The full workflow and script regression suite require a POSIX environment (Linux, macOS, or WSL): `run_lock.py` uses Python's `fcntl` module. Native Windows can run the ranker, linter and root `tests/`, but cannot import the shared-run lock or complete the full script suite. The multiline examples below use a POSIX shell; in PowerShell, put each command on one line.
+
 ```bash
 git clone https://github.com/Faiz-V/predx-x-news-workflow.git
 cd predx-x-news-workflow
@@ -76,6 +78,8 @@ python -m unittest discover \
 ```
 
 The fixtures use `example.com` and synthetic copy. They demonstrate the contracts without publishing real operating history.
+
+CI runs the root CLI tests, the script regression suite and the public example on Ubuntu with Python 3.10 and 3.12. Passing those checks validates the deterministic utilities; it does not verify live reporting, source truth or the editorial quality of a generated post.
 
 ## Status model
 
