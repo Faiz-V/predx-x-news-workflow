@@ -22,6 +22,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Run tests
         run: python -m unittest discover -s tests -v
+      - name: Run script regression tests
+        run: >-
+          python -m unittest discover
+          -s .agents/skills/predx-x-news-writer/scripts
+          -p 'test_*.py' -v
       - name: Validate the public example
         run: >-
           python .agents/skills/predx-x-news-writer/scripts/lint_output.py
